@@ -9,57 +9,162 @@ modify, read, and delete files.  Your client will call the various file
 modification/creation/deletion RPC calls.  We will be testing your service with
 our own client, and your client with instrumented versions of our service.
 """
+class ErrorResponse(Exception):
+    def __init__(self, message):
+        super(ErrorResponse, self).__init__(message)
+        self.error = message
+
+    def missing_blocks(self, hashlist):
+        self.error_type = 1
+        self.missing_blocks = hashlist
+
+    def wrong_version_error(self, version):
+        self.error_type = 2
+        self.current_version = version
+
+    def file_not_found(self):
+        self.error_type = 3
+
 
 class SurfStoreClient():
 
-	"""
-	Initialize the client and set up connections to the block stores and
-	metadata store using the config file
-	"""
-	def __init__(self, config):
-		pass
 
-	"""
-	upload(filepath) : Reads the local file, creates a set of 
-	hashed blocks and uploads them onto the MetadataStore 
-	(and potentially the BlockStore if they were not already present there).
-	"""
-	def upload(self, filepath):
-		pass
+    """
+    Initialize the client and set up connections to the block stores and
+    metadata store using the config file
+    """
+    def __init__(self, config):
+
+        self.blockhosts = []
+        self.blockstores = {}
+        self.pathToDict ={}
+
+        with open(config) as f:
+            lines = f.readlines()
+        for line in lines:
+            if line.startswith("B"):
+                self.numBlockStores = int(line.split(": ")[1])
+            if line.startswith("block"):
+                host = line.split(": ")[1].split(":")[0]
+                port = line.split(": ")[1].split(":")[1]
+                self.blockhosts.append((host, port))
+            if line.startswith("metadata"):
+                host = line.split(": ")[1].split(":")[0]
+                port = line.split(": ")[1].split(":")[1]
+                print(host)
+                print(port)
+                self.metadata = rpyc.connect(host,port)
+
+        for (host, port) in self.blockhosts:
+            blockstore = rpyc.connect(host, port)
+            self.blockstores.append(blockstore)
+
+    """
+    upload(filepath) : Reads the local file, creates a set of 
+    hashed blocks and uploads them onto the MetadataStore 
+    (and potentially the BlockStore if they were not already present there).
+    """
+    def convert(self,b):
+        return hashlib.sha256(b).hexdigest()
 
 
-	"""
-	delete(filename) : Signals the MetadataStore to delete a file.
-	"""
-	def delete(self, filename):
-		pass
+    def upload(self, filepath):
+        filepath = os.path.abspath(filepath)
+        k = filepath.rfind("/")
+        filename = filepath[k + 1:]
+        dicpath = filepath[:k]
+        v,hashlist = self.metadata.root.exposed_read_file(filename)
+        #get hashlist
+        hashlist = []
+        size = 4096
+        data = []
+        try:
+            with open(filepath,"rb") as f:
+                bytes = f.read(size)
+                while bytes != b"":
+                    data.append(bytes)
+        except:
+            print("Not Found")
+            return
+        for block in data:
+            hash = self.convert(block)
+            hashlist.append(hash)
+            if self.pathToDict[dicpath] is None:
+                self.pathToDict[dicpath] = {}
+            self.pathToDict[dicpath][hash] = block
+        v += 1
+        while True:
+            try:
+                if self.metadata.exposed_modify_file(filename,v,hashlist) == "OK":
+                    print("OK")
+                    break
+            except rpyc.core.vinegar.GenericException as e:
+                if e.error_type == 1:
+                    self.eprint(e.error)
+                    for hash in e.missing_blocks:
+                        blockstore = self.blockstores[self.findServer(hash)]
+                        block = self.pathToDict[filepath][hash]
+                        blockstore.root.exposed_store_block(hash,block)
+                if e.error_type == 2:
+                    self.eprint(e.error)
+                    v = e.current_version + 1
 
-	"""
-        download(filename, dst) : Downloads a file (f) from SurfStore and saves
-        it to (dst) folder. Ensures not to download unnecessary blocks.
-	"""
-	def download(self, filename, location):
-		pass
+    def findServer(self,h):
+         return int(h, 16) % self.numBlockStores
+    def delete(self, filename):
+        v,hashlist = self.metadata.root.exposed_read_file(filename)
+        v += 1
+        while True:
+            try:
+                if self.metadata.root.exposed_delete_file(filename,v) == "OK":
+                    print("OK")
+                    break
+            except rpyc.core.vinegar.GenericException as e:
+                self.eprint(e.error)
+                v = e.current_version + 1
 
-	"""
-	 Use eprint to print debug messages to stderr
-	 E.g - 
-	 self.eprint("This is a debug message")
-	"""
-	def eprint(*args, **kwargs):
-		print(*args, file=sys.stderr, **kwargs)
+
+
+    def download(self, filename, location):
+        filepath = os.path.abspath(location)
+        dicpath = filepath
+        v, hashlist = self.metadata.root.exposed_read_file(filename)
+        if len(hashlist) == 0:
+            print("Not Found")
+            return
+        file = open(location + "/" + filename,'wb')
+        for hash in hashlist:
+            if self.pathToDict[dicpath] is None:
+                self.pathToDict[dicpath] = {}
+            if not hash in self.pathToDict[dicpath]:
+                blockstore = self.blockstores[self.findServer(hash)]
+                block = blockstore.root.exposed_get_block(hash)
+                self.pathToDict[dicpath][hash] = block
+                file.write(block)
+            else:
+                file.write(self.pathToDict[dicpath][hash])
+        print("OK")
+        file.close()
+
+    """
+     Use eprint to print debug messages to stderr
+     E.g -
+     self.eprint("This is a debug message")
+    """
+    def eprint(*args, **kwargs):
+        print(*args, file=sys.stderr, **kwargs)
 
 
 
 if __name__ == '__main__':
-	client = SurfStoreClient(sys.argv[1])
-	operation = sys.argv[2]
-	if operation == 'upload':
-		client.upload(sys.argv[3])
-	elif operation == 'download':
-		client.download(sys.argv[3], sys.argv[4])
-	elif operation == 'delete':
-		client.delete(sys.argv[3])
-	else:
-		print("Invalid operation")
-		
+    client = SurfStoreClient(sys.argv[1])
+    operation = sys.argv[2]
+    if operation == 'upload':
+        client.upload(sys.argv[3])
+    elif operation == 'download':
+        client.download(sys.argv[3], sys.argv[4])
+    elif operation == 'delete':
+        client.delete(sys.argv[3])
+    else:
+        print("Invalid operation")
+

@@ -11,20 +11,20 @@ A sample ErrorResponse class. Use this to respond to client requests when the re
 You can use this class as it is or come up with your own implementation.
 '''
 class ErrorResponse(Exception):
-	def __init__(self, message):
-		super(ErrorResponse, self).__init__(message)
-		self.error = message
+    def __init__(self, message):
+        super(ErrorResponse, self).__init__(message)
+        self.error = message
 
-	def missing_blocks(self, hashlist):
-		self.error_type = 1
-		self.missing_blocks = hashlist
+    def missing_blocks(self, hashlist):
+        self.error_type = 1
+        self.missing_blocks = hashlist
 
-	def wrong_version_error(self, version):
-		self.error_type = 2
-		self.current_version = version
+    def wrong_version_error(self, version):
+        self.error_type = 2
+        self.current_version = version
 
-	def file_not_found(self):
-		self.error_type = 3
+    def file_not_found(self):
+        self.error_type = 3
 
 
 
@@ -35,53 +35,95 @@ The MetadataStore process maintains the mapping of filenames to hashlists. All
 metadata is stored in memory, and no database systems or files will be used to
 maintain the data.
 '''
-class MetadataStore(rpyc.Service):
-	
 
-	"""
+
+
+class MetadataStore(rpyc.Service):
+
+
+    """
         Initialize the class using the config file provided and also initialize
         any datastructures you may need.
-	"""
-	def __init__(self, config):
-		pass
+    """
+    def __init__(self, config):
+        self.fNamesToHList = {}
+        self.fNamesToV = {}
+        self.tombstone = []
+        self.hosts = []
+        self.blockstores = []
 
-	'''
-        ModifyFile(f,v,hl): Modifies file f so that it now contains the
-        contents refered to by the hashlist hl.  The version provided, v, must
-        be exactly one larger than the current version that the MetadataStore
-        maintains.
+        with open(config) as f:
+            lines = f.readlines()
+        for line in lines:
+            if line.startswith("B"):
+                self.numBlockStores = int(line.split(": ")[1])
+            if line.startswith("block"):
+                host = line.split(": ")[1].split(":")[0]
+                port = line.split(": ")[1].split(":")[1]
+                self.hosts.append((host, port))
+            if line.startswith("metadata"):
+                self.host = line.split(": ")[1].split(":")[0]
+        for (host,port) in self.hosts:
+            blockstore = rpyc.connect(host,port)
+            self.blockstores.append(blockstore)
 
-        As per rpyc syntax, adding the prefix 'exposed_' will expose this
-        method as an RPC call
-	'''
-	def exposed_modify_file(self, filename, version, hashlist):
-		
 
-	'''
+    def findServer(self,h):
+         return int(h, 16) % self.numBlockStores
+
+
+
+    def exposed_modify_file(self, filename, version, hashlist):
+            if not self.fNamesToV[filename] + 1 == filename:
+                response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
+                response.wrong_version_error(self.fNamesToV[filename])
+                raise response
+            missingBlocks = []
+            for hash in hashlist:
+                i = self.findServer(hash)
+                c = self.blockstores[i]
+                if not c.root.exposed_has_block(hash):
+                    missingBlocks.append(hash)
+
+            if not len(missingBlocks) == 0:
+                response = ErrorResponse("missingBlocks")
+                response.missing_blocks(missingBlocks)
+                raise response
+
+            self.fNamesToHList[filename] = hashlist
+            self.fNamesToV[filename] += 1
+            return "OK"
+
+
+    '''
         DeleteFile(f,v): Deletes file f. Like ModifyFile(), the provided
         version number v must be one bigger than the most up-date-date version.
 
         As per rpyc syntax, adding the prefix 'exposed_' will expose this
         method as an RPC call
-	'''
-	def exposed_delete_file(self, filename, version):
-		pass
+    '''
+    def exposed_delete_file(self, filename, version):
+        if not self.fNamesToV[filename] + 1 == filename:
+            response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
+            response.wrong_version_error(self.fNamesToV[filename])
+            raise response
+        if not filename in self.fNamesToV:
+            return "OK"
+        self.tombstone.append(filename)
+        self.fNamesToV[filename] += 1
+        return "OK"
 
 
-	'''
-        (v,hl) = ReadFile(f): Reads the file with filename f, returning the
-        most up-to-date version number v, and the corresponding hashlist hl. If
-        the file does not exist, v will be 0.
 
-        As per rpyc syntax, adding the prefix 'exposed_' will expose this
-        method as an RPC call
-	'''
-	def exposed_read_file(self, filename):
-		pass
-
+    def exposed_read_file(self, filename):
+        if filename not in self.fNamesToV:
+            return (0, [])
+        if filename in self.tombstone:
+            return (self.fNamesToV[filename], [])
+        return (self.fNamesToV[filename], self.fNamesToHList[filename])
 
 if __name__ == '__main__':
-	from rpyc.utils.server import ThreadPoolServer
-	server = ThreadPoolServer(MetadataStore(sys.argv[1]), port = 6000)
-	server.start()
+    from rpyc.utils.server import ThreadedServer
+    server = ThreadedServer(MetadataStore(sys.argv[1]), port = 6000)
+    server.start()
 
