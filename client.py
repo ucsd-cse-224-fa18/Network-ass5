@@ -36,7 +36,7 @@ class SurfStoreClient():
     def __init__(self, config):
 
         self.blockhosts = []
-        self.blockstores = {}
+        self.blockstores = []
         self.pathToDict ={}
 
         with open(config) as f:
@@ -47,13 +47,15 @@ class SurfStoreClient():
             if line.startswith("block"):
                 host = line.split(": ")[1].split(":")[0]
                 port = line.split(": ")[1].split(":")[1]
+                port = port.split("\n")[0]
                 self.blockhosts.append((host, port))
             if line.startswith("metadata"):
                 host = line.split(": ")[1].split(":")[0]
                 port = line.split(": ")[1].split(":")[1]
+                port = port.split("\n")[0]
                 print(host)
                 print(port)
-                self.metadata = rpyc.connect(host,port)
+                self.metadata = rpyc.connect(host, port)
 
         for (host, port) in self.blockhosts:
             blockstore = rpyc.connect(host, port)
@@ -70,10 +72,10 @@ class SurfStoreClient():
 
     def upload(self, filepath):
         filepath = os.path.abspath(filepath)
-        k = filepath.rfind("/")
+        k = filepath.rfind("//")
         filename = filepath[k + 1:]
         dicpath = filepath[:k]
-        v,hashlist = self.metadata.root.exposed_read_file(filename)
+        v,hashlist = self.metadata.root.read_file(filename)
         #get hashlist
         hashlist = []
         size = 4096
@@ -82,29 +84,32 @@ class SurfStoreClient():
             with open(filepath,"rb") as f:
                 bytes = f.read(size)
                 while bytes != b"":
+                    bytes = f.read(size)
                     data.append(bytes)
+            f.close()
         except:
             print("Not Found")
             return
         for block in data:
             hash = self.convert(block)
             hashlist.append(hash)
-            if self.pathToDict[dicpath] is None:
+            if dicpath not in self.pathToDict.keys():
                 self.pathToDict[dicpath] = {}
             self.pathToDict[dicpath][hash] = block
         v += 1
         while True:
             try:
-                if self.metadata.exposed_modify_file(filename,v,hashlist) == "OK":
+                if self.metadata.root.modify_file(filename,v,hashlist) == "OK":
                     print("OK")
                     break
             except rpyc.core.vinegar.GenericException as e:
                 if e.error_type == 1:
                     self.eprint(e.error)
                     for hash in e.missing_blocks:
+                        self.eprint(e.missing_blocks)
                         blockstore = self.blockstores[self.findServer(hash)]
                         block = self.pathToDict[filepath][hash]
-                        blockstore.root.exposed_store_block(hash,block)
+                        blockstore.root.store_block(hash,block)
                 if e.error_type == 2:
                     self.eprint(e.error)
                     v = e.current_version + 1
@@ -112,11 +117,11 @@ class SurfStoreClient():
     def findServer(self,h):
          return int(h, 16) % self.numBlockStores
     def delete(self, filename):
-        v,hashlist = self.metadata.root.exposed_read_file(filename)
+        v, hashlist = self.metadata.root.read_file(filename)
         v += 1
         while True:
             try:
-                if self.metadata.root.exposed_delete_file(filename,v) == "OK":
+                if self.metadata.root.delete_file(filename,v) == "OK":
                     print("OK")
                     break
             except rpyc.core.vinegar.GenericException as e:
@@ -128,7 +133,7 @@ class SurfStoreClient():
     def download(self, filename, location):
         filepath = os.path.abspath(location)
         dicpath = filepath
-        v, hashlist = self.metadata.root.exposed_read_file(filename)
+        v, hashlist = self.metadata.root.read_file(filename)
         if len(hashlist) == 0:
             print("Not Found")
             return
@@ -138,7 +143,7 @@ class SurfStoreClient():
                 self.pathToDict[dicpath] = {}
             if not hash in self.pathToDict[dicpath]:
                 blockstore = self.blockstores[self.findServer(hash)]
-                block = blockstore.root.exposed_get_block(hash)
+                block = blockstore.root.get_block(hash)
                 self.pathToDict[dicpath][hash] = block
                 file.write(block)
             else:

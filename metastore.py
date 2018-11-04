@@ -60,9 +60,11 @@ class MetadataStore(rpyc.Service):
             if line.startswith("block"):
                 host = line.split(": ")[1].split(":")[0]
                 port = line.split(": ")[1].split(":")[1]
+                port = port.split("\n")[0]
                 self.hosts.append((host, port))
             if line.startswith("metadata"):
                 self.host = line.split(": ")[1].split(":")[0]
+                print(self.host)
         for (host,port) in self.hosts:
             blockstore = rpyc.connect(host,port)
             self.blockstores.append(blockstore)
@@ -74,6 +76,10 @@ class MetadataStore(rpyc.Service):
 
 
     def exposed_modify_file(self, filename, version, hashlist):
+            if not filename in self.fNamesToV:
+                response = ErrorResponse("missingBlocks")
+                response.missing_blocks(hashlist)
+                raise response
             if not self.fNamesToV[filename] + 1 == filename:
                 response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
                 response.wrong_version_error(self.fNamesToV[filename])
@@ -82,7 +88,7 @@ class MetadataStore(rpyc.Service):
             for hash in hashlist:
                 i = self.findServer(hash)
                 c = self.blockstores[i]
-                if not c.root.exposed_has_block(hash):
+                if not c.root.has_block(hash):
                     missingBlocks.append(hash)
 
             if not len(missingBlocks) == 0:
@@ -103,12 +109,12 @@ class MetadataStore(rpyc.Service):
         method as an RPC call
     '''
     def exposed_delete_file(self, filename, version):
+        if not filename in self.fNamesToV:
+            return "OK"
         if not self.fNamesToV[filename] + 1 == filename:
             response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
             response.wrong_version_error(self.fNamesToV[filename])
             raise response
-        if not filename in self.fNamesToV:
-            return "OK"
         self.tombstone.append(filename)
         self.fNamesToV[filename] += 1
         return "OK"
@@ -124,6 +130,6 @@ class MetadataStore(rpyc.Service):
 
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer
-    server = ThreadedServer(MetadataStore(sys.argv[1]), port = 6000)
+    server = ThreadedServer(MetadataStore(sys.argv[1]), port=6000)
     server.start()
 
