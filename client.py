@@ -72,7 +72,7 @@ class SurfStoreClient():
 
     def upload(self, filepath):
         filepath = os.path.abspath(filepath)
-        k = filepath.rfind("//")
+        k = filepath.rfind("\\")
         filename = filepath[k + 1:]
         dicpath = filepath[:k]
         v,hashlist = self.metadata.root.read_file(filename)
@@ -84,8 +84,8 @@ class SurfStoreClient():
             with open(filepath,"rb") as f:
                 bytes = f.read(size)
                 while bytes != b"":
-                    bytes = f.read(size)
                     data.append(bytes)
+                    bytes = f.read(size)
             f.close()
         except:
             print("Not Found")
@@ -99,16 +99,16 @@ class SurfStoreClient():
         v += 1
         while True:
             try:
-                if self.metadata.root.modify_file(filename,v,hashlist) == "OK":
-                    print("OK")
-                    break
+                self.metadata.root.modify_file(filename,v,hashlist)
+                print("OK")
+                break
             except rpyc.core.vinegar.GenericException as e:
                 if e.error_type == 1:
                     self.eprint(e.error)
                     for hash in e.missing_blocks:
                         self.eprint(e.missing_blocks)
                         blockstore = self.blockstores[self.findServer(hash)]
-                        block = self.pathToDict[filepath][hash]
+                        block = self.pathToDict[dicpath][hash]
                         blockstore.root.store_block(hash,block)
                 if e.error_type == 2:
                     self.eprint(e.error)
@@ -121,9 +121,9 @@ class SurfStoreClient():
         v += 1
         while True:
             try:
-                if self.metadata.root.delete_file(filename,v) == "OK":
-                    print("OK")
-                    break
+                self.metadata.root.delete_file(filename,v)
+                print("OK")
+                break
             except rpyc.core.vinegar.GenericException as e:
                 self.eprint(e.error)
                 v = e.current_version + 1

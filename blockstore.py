@@ -13,6 +13,9 @@ class BlockStore(rpyc.Service):
 
     def exposed_store_block(self, h, block):
         self.blocks[h] = block
+        for hash in h:
+            print(hash)
+        print(block)
         pass
 
 

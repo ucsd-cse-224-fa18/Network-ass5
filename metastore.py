@@ -78,9 +78,10 @@ class MetadataStore(rpyc.Service):
     def exposed_modify_file(self, filename, version, hashlist):
             if not filename in self.fNamesToV:
                 response = ErrorResponse("missingBlocks")
-                response.missing_blocks(hashlist)
+                response.missing_blocks(tuple(hashlist))
+                print(len(hashlist))
                 raise response
-            if not self.fNamesToV[filename] + 1 == filename:
+            if not self.fNamesToV[filename] + 1 == version:
                 response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
                 response.wrong_version_error(self.fNamesToV[filename])
                 raise response
@@ -92,8 +93,9 @@ class MetadataStore(rpyc.Service):
                     missingBlocks.append(hash)
 
             if not len(missingBlocks) == 0:
+                print(len(missingBlocks))
                 response = ErrorResponse("missingBlocks")
-                response.missing_blocks(missingBlocks)
+                response.missing_blocks(tuple(missingBlocks))
                 raise response
 
             self.fNamesToHList[filename] = hashlist
@@ -123,6 +125,7 @@ class MetadataStore(rpyc.Service):
 
     def exposed_read_file(self, filename):
         if filename not in self.fNamesToV:
+            self.fNamesToV[filename] = 0
             return (0, [])
         if filename in self.tombstone:
             return (self.fNamesToV[filename], [])
