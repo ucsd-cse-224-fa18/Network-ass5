@@ -69,7 +69,7 @@ class SurfStoreClient():
 
 
     def upload(self, filepath):
-        #filepath = os.path.abspath(filepath)
+        filepath = os.path.abspath(filepath)
         k = filepath.rfind("\\")
         #filename = filepath[k + 1:]
         #dicpath = filepath[:k]
