@@ -119,7 +119,7 @@ class MetadataStore(rpyc.Service):
             raise response
         self.tombstone.append(filename)
         self.fNamesToV[filename] += 1
-        return "OK"
+        return self.fNamesToV[filename], tuple([])
 
 
 

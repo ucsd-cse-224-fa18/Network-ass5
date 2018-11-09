@@ -119,7 +119,7 @@ class SurfStoreClient():
         v += 1
         while True:
             try:
-                self.metadata.root.delete_file(filename,v)
+                self.metadata.root.delete_file(filename, v)
                 print("OK")
                 break
             except rpyc.core.vinegar.GenericException as e:
