@@ -70,7 +70,7 @@ class SurfStoreClient():
 
     def upload(self, filepath):
 
-        filepath = os.path.abspath(filepath)
+        #filepath = os.path.abspath(filepath)
         k = filepath.rfind("\\")
         #filename = filepath[k + 1:]
         #dicpath = filepath[:k]
@@ -102,7 +102,6 @@ class SurfStoreClient():
             try:
                 self.metadata.root.modify_file(filepath,v,tuple(hashlist))
                 print("OK")
-                print(filepath)
                 break
             except rpyc.core.vinegar.GenericException as e:
                 if e.error_type == 1:
