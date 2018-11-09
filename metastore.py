@@ -64,7 +64,6 @@ class MetadataStore(rpyc.Service):
                 self.hosts.append((host, port))
             if line.startswith("metadata"):
                 self.host = line.split(": ")[1].split(":")[0]
-                print(self.host)
         for (host,port) in self.hosts:
             blockstore = rpyc.connect(host,port)
             self.blockstores.append(blockstore)
@@ -79,7 +78,6 @@ class MetadataStore(rpyc.Service):
             if not filename in self.fNamesToV:
                 response = ErrorResponse("missingBlocks")
                 response.missing_blocks(tuple(hashlist))
-                print(len(hashlist))
                 raise response
             if not self.fNamesToV[filename] + 1 == version:
                 response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
