@@ -127,11 +127,11 @@ class MetadataStore(rpyc.Service):
             print(self.fNamesToV[filename])
             self.fNamesToV[filename] = 0
             self.fNamesToHList[filename] = []
-            return (filename, tuple([]))
+            return 0, tuple([])
         if filename in self.tombstone:
             return (self.fNamesToV[filename],tuple([]))
 
-        return filename, tuple(self.fNamesToHList[filename])
+        return self.fNamesToV[filename], tuple(self.fNamesToHList[filename])
 
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer
