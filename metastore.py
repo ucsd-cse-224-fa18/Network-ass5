@@ -84,7 +84,9 @@ class MetadataStore(rpyc.Service):
                     response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
                     response.wrong_version_error(self.fNamesToV[filename])
                     raise response
-
+            self.fNamesToHList[filename] = list(hashlist)
+            self.fNamesToV[filename] += 1
+            
             missingBlocks = []
             if filename in self.tombstone:
                 self.tombstone.remove(filename)
@@ -99,8 +101,7 @@ class MetadataStore(rpyc.Service):
                 response = ErrorResponse("missingBlocks")
                 response.missing_blocks(tuple(missingBlocks))
                 raise response
-            self.fNamesToHList[filename] = list(hashlist)
-            self.fNamesToV[filename] += 1
+
             return self.fNamesToV[filename], tuple(hashlist)
 
 
