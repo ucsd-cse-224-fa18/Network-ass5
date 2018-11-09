@@ -100,6 +100,7 @@ class SurfStoreClient():
             try:
                 self.metadata.root.modify_file(filename,v,tuple(hashlist))
                 print("OK")
+                print(filename)
                 break
             except rpyc.core.vinegar.GenericException as e:
                 if e.error_type == 1:
@@ -122,7 +123,6 @@ class SurfStoreClient():
             try:
                 self.metadata.root.delete_file(filename,v)
                 print("OK")
-                print(filename)
                 break
             except rpyc.core.vinegar.GenericException as e:
                 self.eprint(e.error)
