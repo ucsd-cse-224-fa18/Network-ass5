@@ -124,12 +124,13 @@ class MetadataStore(rpyc.Service):
 
     def exposed_read_file(self, filename):
         if filename not in self.fNamesToV:
+            print(self.fNamesToV[filename])
             self.fNamesToV[filename] = 0
             self.fNamesToHList[filename] = []
-            return (0, tuple([]))
+            return (filename, tuple([]))
         if filename in self.tombstone:
             return (self.fNamesToV[filename],tuple([]))
-        print(self.fNamesToV[filename])
+
         return filename, tuple(self.fNamesToHList[filename])
 
 if __name__ == '__main__':
