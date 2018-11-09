@@ -122,6 +122,7 @@ class SurfStoreClient():
             try:
                 self.metadata.root.delete_file(filename,v)
                 print("OK")
+                print(filename)
                 break
             except rpyc.core.vinegar.GenericException as e:
                 self.eprint(e.error)
@@ -135,7 +136,6 @@ class SurfStoreClient():
         v, hashlist = self.metadata.root.read_file(filename)
         if len(hashlist) == 0:
             print("Not Found")
-            print(filename)
             return
         file = open(dicpath + filename,'wb')
         for hash in hashlist:
