@@ -73,7 +73,7 @@ class SurfStoreClient():
         k = filepath.rfind("\\")
         filename = filepath[k + 1:]
         dicpath = filepath[:k]
-        v,hashlist = self.metadata.root.read_file(filename)
+        v,hashlist = self.metadata.root.read_file(filepath)
         #get hashlist
         hashlist = []
         size = 4096
@@ -105,7 +105,6 @@ class SurfStoreClient():
                 if e.error_type == 1:
                     self.eprint(e.error)
                     for hash in e.missing_blocks:
-                        self.eprint(e.missing_blocks)
                         blockstore = self.blockstores[self.findServer(hash)]
                         block = self.pathToDict[dicpath][hash]
                         blockstore.root.store_block(hash,block)
@@ -130,11 +129,11 @@ class SurfStoreClient():
 
 
 
+
     def download(self, filename, location):
         filepath = os.path.abspath(location)
         dicpath = filepath
-        v, hashlist = self.metadata.root.read_file(filename)
-        print(filename)
+        v, hashlist = self.metadata.root.read_file(dicpath)
         if len(hashlist) == 0:
             print("Not Found")
             return

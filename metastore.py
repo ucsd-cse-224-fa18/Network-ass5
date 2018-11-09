@@ -97,10 +97,9 @@ class MetadataStore(rpyc.Service):
                 response = ErrorResponse("missingBlocks")
                 response.missing_blocks(tuple(missingBlocks))
                 raise response
-
-            self.fNamesToHList[filename] = hashlist
+            self.fNamesToHList[filename] = list(hashlist)
             self.fNamesToV[filename] += 1
-            return self.fNamesToV[filename],tuple(hashlist)
+            return self.fNamesToV[filename], tuple(hashlist)
 
 
     '''
@@ -130,6 +129,7 @@ class MetadataStore(rpyc.Service):
             return (0, tuple([]))
         if filename in self.tombstone:
             return (self.fNamesToV[filename],tuple([]))
+        print(self.fNamesToV[filename])
         return self.fNamesToV[filename], tuple(self.fNamesToHList[filename])
 
 if __name__ == '__main__':
