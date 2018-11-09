@@ -53,8 +53,6 @@ class SurfStoreClient():
                 host = line.split(": ")[1].split(":")[0]
                 port = line.split(": ")[1].split(":")[1]
                 port = port.split("\n")[0]
-                print(host)
-                print(port)
                 self.metadata = rpyc.connect(host, port)
 
         for (host, port) in self.blockhosts:

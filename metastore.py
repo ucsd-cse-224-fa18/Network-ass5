@@ -102,7 +102,7 @@ class MetadataStore(rpyc.Service):
 
             self.fNamesToHList[filename] = hashlist
             self.fNamesToV[filename] += 1
-            return "OK"
+            return self.fNamesToV[filename],tuple(hashlist)
 
 
     '''
@@ -132,7 +132,6 @@ class MetadataStore(rpyc.Service):
             return (0, tuple([]))
         if filename in self.tombstone:
             return (self.fNamesToV[filename],tuple([]))
-        print(self.fNamesToHList[filename])
         return self.fNamesToV[filename], tuple(self.fNamesToHList[filename])
 
 if __name__ == '__main__':
