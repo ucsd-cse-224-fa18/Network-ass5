@@ -112,14 +112,14 @@ class MetadataStore(rpyc.Service):
     '''
     def exposed_delete_file(self, filename, version):
         if not filename in self.fNamesToV:
-            return "OK"
+            return 0, tuple([filename])
         if not self.fNamesToV[filename] + 1 == version:
             response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
             response.wrong_version_error(self.fNamesToV[filename])
             raise response
         self.tombstone.append(filename)
         self.fNamesToV[filename] += 1
-        return self.fNamesToV[filename], tuple([])
+        return self.fNamesToV[filename], tuple([filename])
 
 
 
