@@ -75,14 +75,12 @@ class MetadataStore(rpyc.Service):
 
 
     def exposed_modify_file(self, filename, version, hashlist):
-            if not filename in self.fNamesToV:
-                response = ErrorResponse("missingBlocks")
-                response.missing_blocks(tuple(hashlist))
-                raise response
-            if not self.fNamesToV[filename] + 1 == version:
-                response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
-                response.wrong_version_error(self.fNamesToV[filename])
-                raise response
+
+            if filename in self.fNamesToV:
+                if not self.fNamesToV[filename] + 1 == version:
+                    response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
+                    response.wrong_version_error(self.fNamesToV[filename])
+                    raise response
             missingBlocks = []
             if filename in self.tombstone:
                 self.tombstone.remove(filename)
@@ -112,14 +110,14 @@ class MetadataStore(rpyc.Service):
     '''
     def exposed_delete_file(self, filename, version):
         if not filename in self.fNamesToV:
-            return 0, tuple([filename])
+            return 0, tuple([])
         if not self.fNamesToV[filename] + 1 == version:
             response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
             response.wrong_version_error(self.fNamesToV[filename])
             raise response
         self.tombstone.append(filename)
         self.fNamesToV[filename] += 1
-        return self.fNamesToV[filename], tuple([filename])
+        return self.fNamesToV[filename], tuple([])
 
 
 
@@ -127,7 +125,7 @@ class MetadataStore(rpyc.Service):
         if filename not in self.fNamesToV:
             self.fNamesToV[filename] = 0
             self.fNamesToHList[filename] = []
-            return (0, tuple([]))
+            return (0, tuple([filename]))
         if filename in self.tombstone:
             return (self.fNamesToV[filename],tuple([]))
         return self.fNamesToV[filename], tuple(self.fNamesToHList[filename])
