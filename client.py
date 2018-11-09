@@ -117,7 +117,6 @@ class SurfStoreClient():
     def delete(self, filename):
         v, hashlist = self.metadata.root.read_file(filename)
         v += 1
-        print(v)
         while True:
             try:
                 self.metadata.root.delete_file(filename,v)
