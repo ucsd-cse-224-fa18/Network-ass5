@@ -133,13 +133,10 @@ class SurfStoreClient():
 
 
     def download(self, filename, location):
-        filepath = os.path.abspath(location)
-        dicpath = filepath
+        dicpath = os.path.abspath(location)
         v, hashlist = self.metadata.root.read_file(filename)
         if len(hashlist) == 0:
             print("Not Found")
-            print(filename)
-            print(location)
             return
         file = open(dicpath + filename,'wb')
         for hash in hashlist:
