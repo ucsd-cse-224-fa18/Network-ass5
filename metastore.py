@@ -108,6 +108,7 @@ class MetadataStore(rpyc.Service):
 
         As per rpyc syntax, adding the prefix 'exposed_' will expose this
         method as an RPC call
+
     '''
     def exposed_delete_file(self, filename, version):
         if not filename in self.fNamesToV:

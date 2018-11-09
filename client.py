@@ -69,12 +69,10 @@ class SurfStoreClient():
 
 
     def upload(self, filepath):
-
         filepath = os.path.abspath(filepath)
         k = filepath.rfind("\\")
         filename = filepath[k + 1:]
         dicpath = filepath[:k]
-        dicpath = filepath
         v,hashlist = self.metadata.root.read_file(filename)
         #get hashlist
         hashlist = []
@@ -137,6 +135,7 @@ class SurfStoreClient():
         v, hashlist = self.metadata.root.read_file(filename)
         if len(hashlist) == 0:
             print("Not Found")
+            print(filename)
             return
         file = open(dicpath + filename,'wb')
         for hash in hashlist:
