@@ -86,6 +86,9 @@ class MetadataStore(rpyc.Service):
                 response.wrong_version_error(self.fNamesToV[filename])
                 raise response
             missingBlocks = []
+            if filename in self.tombstone:
+                self.tombstone.remove(filename)
+
             for hash in hashlist:
                 i = self.findServer(hash)
                 c = self.blockstores[i]
@@ -93,7 +96,6 @@ class MetadataStore(rpyc.Service):
                     missingBlocks.append(hash)
 
             if not len(missingBlocks) == 0:
-                print(len(missingBlocks))
                 response = ErrorResponse("missingBlocks")
                 response.missing_blocks(tuple(missingBlocks))
                 raise response
@@ -113,7 +115,7 @@ class MetadataStore(rpyc.Service):
     def exposed_delete_file(self, filename, version):
         if not filename in self.fNamesToV:
             return "OK"
-        if not self.fNamesToV[filename] + 1 == filename:
+        if not self.fNamesToV[filename] + 1 == version:
             response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
             response.wrong_version_error(self.fNamesToV[filename])
             raise response
@@ -126,10 +128,12 @@ class MetadataStore(rpyc.Service):
     def exposed_read_file(self, filename):
         if filename not in self.fNamesToV:
             self.fNamesToV[filename] = 0
-            return (0, [])
+            self.fNamesToHList[filename] = []
+            return (0, tuple([]))
         if filename in self.tombstone:
-            return (self.fNamesToV[filename], [])
-        return (self.fNamesToV[filename], self.fNamesToHList[filename])
+            return (self.fNamesToV[filename],tuple([]))
+        print(self.fNamesToHList[filename])
+        return self.fNamesToV[filename], tuple(self.fNamesToHList[filename])
 
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer

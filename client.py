@@ -87,6 +87,7 @@ class SurfStoreClient():
                     data.append(bytes)
                     bytes = f.read(size)
             f.close()
+            #todo 不用throw exception,return a pair where the version is the first element, and the hash list is empty.
         except:
             print("Not Found")
             return
@@ -99,7 +100,7 @@ class SurfStoreClient():
         v += 1
         while True:
             try:
-                self.metadata.root.modify_file(filename,v,hashlist)
+                self.metadata.root.modify_file(filename,v,tuple(hashlist))
                 print("OK")
                 break
             except rpyc.core.vinegar.GenericException as e:
@@ -119,6 +120,7 @@ class SurfStoreClient():
     def delete(self, filename):
         v, hashlist = self.metadata.root.read_file(filename)
         v += 1
+        print(v)
         while True:
             try:
                 self.metadata.root.delete_file(filename,v)
@@ -134,12 +136,13 @@ class SurfStoreClient():
         filepath = os.path.abspath(location)
         dicpath = filepath
         v, hashlist = self.metadata.root.read_file(filename)
+        print(filename)
         if len(hashlist) == 0:
             print("Not Found")
             return
-        file = open(location + "/" + filename,'wb')
+        file = open(dicpath + filename,'wb')
         for hash in hashlist:
-            if self.pathToDict[dicpath] is None:
+            if not dicpath in self.pathToDict:
                 self.pathToDict[dicpath] = {}
             if not hash in self.pathToDict[dicpath]:
                 blockstore = self.blockstores[self.findServer(hash)]
