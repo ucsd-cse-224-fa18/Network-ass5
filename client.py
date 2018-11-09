@@ -69,10 +69,11 @@ class SurfStoreClient():
 
 
     def upload(self, filepath):
-        filepath = os.path.abspath(filepath)
+        #filepath = os.path.abspath(filepath)
         k = filepath.rfind("\\")
-        filename = filepath[k + 1:]
-        dicpath = filepath[:k]
+        #filename = filepath[k + 1:]
+        #dicpath = filepath[:k]
+        dicpath = filepath
         v,hashlist = self.metadata.root.read_file(filepath)
         #get hashlist
         hashlist = []
@@ -98,7 +99,7 @@ class SurfStoreClient():
         v += 1
         while True:
             try:
-                self.metadata.root.modify_file(filename,v,tuple(hashlist))
+                self.metadata.root.modify_file(filepath,v,tuple(hashlist))
                 print("OK")
                 break
             except rpyc.core.vinegar.GenericException as e:
@@ -133,7 +134,7 @@ class SurfStoreClient():
     def download(self, filename, location):
         filepath = os.path.abspath(location)
         dicpath = filepath
-        v, hashlist = self.metadata.root.read_file(dicpath)
+        v, hashlist = self.metadata.root.read_file(filename)
         if len(hashlist) == 0:
             print("Not Found")
             return
