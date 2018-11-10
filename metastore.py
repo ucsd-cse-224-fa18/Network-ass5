@@ -77,10 +77,8 @@ class MetadataStore(rpyc.Service):
     def exposed_modify_file(self, filename, version, hashlist):
             if filename not in self.fNamesToV:
                 self.fNamesToHList[filename] = list(hashlist)
-                self.fNamesToV[filename] += 1
-                return self.fNamesToV[filename], tuple(hashlist)
-            if filename not in self.fNamesToV:
-                if not version == 0:
+                self.fNamesToV[filename] = version
+                if not version == 1:
                     response = ErrorResponse("Error:Requires version =" + str(1))
                     response.wrong_version_error(self.fNamesToV[filename])
                     raise response
