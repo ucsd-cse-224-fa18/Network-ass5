@@ -85,7 +85,6 @@ class SurfStoreClient():
                     data.append(bytes)
                     bytes = f.read(size)
             f.close()
-            #todo 不用throw exception,return a pair where the version is the first element, and the hash list is empty.
         except:
             print("Not Found")
             return
