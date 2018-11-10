@@ -134,7 +134,7 @@ class SurfStoreClient():
         if len(hashlist) == 0:
             print("Not Found")
             return
-        file = open(dicpath + filename,'wb')
+        file = open(dicpath + "/" + filename,'wb')
         for hash in hashlist:
             if not dicpath in self.pathToDict:
                 self.pathToDict[dicpath] = {}
