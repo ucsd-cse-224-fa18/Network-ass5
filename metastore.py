@@ -1,3 +1,5 @@
+import threading
+
 import rpyc
 import sys
 
@@ -51,7 +53,7 @@ class MetadataStore(rpyc.Service):
         self.tombstone = []
         self.hosts = []
         self.blockstores = []
-
+        self.lock = threading.Lock()
         with open(config) as f:
             lines = f.readlines()
         for line in lines:
@@ -75,6 +77,7 @@ class MetadataStore(rpyc.Service):
 
 
     def exposed_modify_file(self, filename, version, hashlist):
+        with self.lock:
             if filename not in self.fNamesToV:
                 if version == 1:
                     self.fNamesToHList[filename] = list(hashlist)
@@ -132,13 +135,14 @@ class MetadataStore(rpyc.Service):
 
 
     def exposed_read_file(self, filename):
-        if filename not in self.fNamesToV:
-            self.fNamesToV[filename] = 0
-            self.fNamesToHList[filename] = []
-            return (0, tuple([]))
-        if filename in self.tombstone:
-            return (self.fNamesToV[filename],tuple([]))
-        return self.fNamesToV[filename], tuple(self.fNamesToHList[filename])
+        with self.lock:
+            if filename not in self.fNamesToV:
+                self.fNamesToV[filename] = 0
+                self.fNamesToHList[filename] = []
+                return (0, tuple([]))
+            if filename in self.tombstone:
+                return (self.fNamesToV[filename],tuple([]))
+            return self.fNamesToV[filename], tuple(self.fNamesToHList[filename])
 
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer
