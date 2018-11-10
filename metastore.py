@@ -79,6 +79,8 @@ class MetadataStore(rpyc.Service):
 
     def exposed_modify_file(self, filename, version, hashlist):
         with self.lock:
+            #print("doing")
+            #time.sleep(30)
             if filename not in self.fNamesToV:
                 if version == 1:
                     self.fNamesToHList[filename] = list(hashlist)
@@ -111,6 +113,7 @@ class MetadataStore(rpyc.Service):
 
             self.fNamesToHList[filename] = list(hashlist)
             self.fNamesToV[filename] += 1
+            #print("finished")
             return self.fNamesToV[filename], tuple(hashlist)
 
 
@@ -136,7 +139,9 @@ class MetadataStore(rpyc.Service):
 
 
     def exposed_read_file(self, filename):
+        #print("wait")
         with self.lock:
+            #print("start")
             if filename not in self.fNamesToV:
                 self.fNamesToV[filename] = 0
                 self.fNamesToHList[filename] = []
