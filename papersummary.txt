@@ -6,6 +6,12 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit...
 
 # If in a group of two, put the second paper summary here:
 
-PID: A12345678
+PID: A53253957
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit...
+This paper aims to make the choices the designer of an RPC facility must take in light of their particular aims and environment. They produced a system whose design has several novel aspects. This paper includes a discussion of the major issues facing the designer of an RPC facility and major decisions about them. It also describes the overall structure of the solution. They also describe in some detail their binding mechanism and their transport level communication protocol. 
+
+Strength: RPC makes distributed computation easy, which encourages people to build and experiment with distributed applications. It’s also rather efficient and could provide secure communication, which is the first one to do that.
+
+Weakness: They envisage that most of the RPC communication is on the local Ethernet and the Ethernets are not overloaded. There are still some circumstances in which RPC seems to be the wrong communication paradigm. These correspond to situations where solutions based on multicasting or broadcasting seem more appropriate.
+
+I think the design presented may not be applied directly to today’s distributed systems. Today most communication is in the Internet and the bandwidth has increased significantly. Thus the principle the paper chose that the semantics of remote procedure calls should be as close as possible to those of local (single-machine) procedure calls may not hold. However, we still face similar issues when designing distributed systems and this paper gives us a good example of what to consider.
