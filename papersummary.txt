@@ -1,8 +1,15 @@
 # Your paper summary goes here:
 
-PID: A12345678
+PID:A53285502
+Name:Yujie Zhou
+Write a brief summary of this paper, including your opinion of the strengths and weaknesses of the design. Is the design presented relevant for today’s distributed systems?
+Strengths: One is clean and simple semantics: these should make it easier to build distributed computations, and to get them right. Another is efficiency: procedure calls seem simple enough for the communication to be quite rapid. A third is generality: in singie-machine computations, procedures are often the most important mechanism for communication between parts of the algorithm. 
+Weakness:One: It is only interaction based. This does not offer any flexibility in terms of hardware architecture. Two: it has no time-out mechanism limiting the duration of a remote call and its exception handling is not easy.Three: RPC is described in a single way, generally one should answer one. There are some scenarios that cannot be described by RPC.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit...
+Is the design presented relevant for today's distributed systems? Why or why not?
+Yes.By using PRC, the programmer does not need to build detailed communication-related code which is very convenient. The user-stub and server-stub
+are automatically generated and RPCRuntime is responsible for retransmissions, acknowledgments, packet routing, and encryption. So the call happens just as if the user had invoked the procedure in the server directly. They can just define interface module together with the types of their arguments and
+results and write the user and server code. PRC also provides quite elaborate facilities for a procedure to notify exceptions. If the catch phrase returns, the results are passed back to the callee machine, and events proceed normally. If the catch phrase terminates by a jump then the callee machine is so notified, which then unwinds the appropriate procedure activations. And RPC package and protocol include facilities for providing encryption-based security for calls. It provides full end-to-end encryption of calls and results. 
 
 # If in a group of two, put the second paper summary here:
 
