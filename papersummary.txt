@@ -1,24 +1,11 @@
 # Your paper summary goes here:
 
-PID:A53285502
-Name:Yujie Zhou
-Write a brief summary of this paper, including your opinion of the strengths and weaknesses of the design. Is the design presented relevant for today’s distributed systems?
-Strengths: One is clean and simple semantics: these should make it easier to build distributed computations, and to get them right. Another is efficiency: procedure calls seem simple enough for the communication to be quite rapid. A third is generality: in singie-machine computations, procedures are often the most important mechanism for communication between parts of the algorithm. 
-Weakness:One: It is only interaction based. This does not offer any flexibility in terms of hardware architecture. Two: it has no time-out mechanism limiting the duration of a remote call and its exception handling is not easy.Three: RPC is described in a single way, generally one should answer one. There are some scenarios that cannot be described by RPC.
+PID: A12345678
 
-Is the design presented relevant for today's distributed systems? Why or why not?
-Yes.By using PRC, the programmer does not need to build detailed communication-related code which is very convenient. The user-stub and server-stub
-are automatically generated and RPCRuntime is responsible for retransmissions, acknowledgments, packet routing, and encryption. So the call happens just as if the user had invoked the procedure in the server directly. They can just define interface module together with the types of their arguments and
-results and write the user and server code. PRC also provides quite elaborate facilities for a procedure to notify exceptions. If the catch phrase returns, the results are passed back to the callee machine, and events proceed normally. If the catch phrase terminates by a jump then the callee machine is so notified, which then unwinds the appropriate procedure activations. And RPC package and protocol include facilities for providing encryption-based security for calls. It provides full end-to-end encryption of calls and results. 
+Lorem ipsum dolor sit amet, consectetur adipiscing elit...
 
 # If in a group of two, put the second paper summary here:
 
-PID: A53253957
+PID: A12345678
 
-This paper aims to make the choices the designer of an RPC facility must take in light of their particular aims and environment. They produced a system whose design has several novel aspects. This paper includes a discussion of the major issues facing the designer of an RPC facility and major decisions about them. It also describes the overall structure of the solution. They also describe in some detail their binding mechanism and their transport level communication protocol. 
-
-Strength: RPC makes distributed computation easy, which encourages people to build and experiment with distributed applications. It’s also rather efficient and could provide secure communication, which is the first one to do that.
-
-Weakness: They envisage that most of the RPC communication is on the local Ethernet and the Ethernets are not overloaded. There are still some circumstances in which RPC seems to be the wrong communication paradigm. These correspond to situations where solutions based on multicasting or broadcasting seem more appropriate.
-
-I think the design presented may not be applied directly to today’s distributed systems. Today most communication is in the Internet and the bandwidth has increased significantly. Thus the principle the paper chose that the semantics of remote procedure calls should be as close as possible to those of local (single-machine) procedure calls may not hold. However, we still face similar issues when designing distributed systems and this paper gives us a good example of what to consider.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit...

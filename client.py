@@ -2,7 +2,7 @@ import rpyc
 import hashlib
 import os
 import sys
-
+import glob
 """
 A client is a program that interacts with SurfStore. It is used to create,
 modify, read, and delete files.  Your client will call the various file
@@ -70,7 +70,8 @@ class SurfStoreClient():
 
     def upload(self, filepath):
         filepath = os.path.abspath(filepath)
-        k = filepath.rfind("/")
+        #linux k = filepath.rfind("/")
+        k = filepath.rfind("\\")
         filename = filepath[k + 1:]
         dicpath = filepath[:k]
         v,hashlist = self.metadata.root.read_file(filename)
@@ -110,7 +111,6 @@ class SurfStoreClient():
                 if e.error_type == 2:
                     self.eprint(e.error)
                     v = e.current_version + 1
-
     def findServer(self,h):
          return int(h, 16) % self.numBlockStores
     def delete(self, filename):
@@ -118,7 +118,10 @@ class SurfStoreClient():
         v += 1
         while True:
             try:
-                self.metadata.root.delete_file(filename, v)
+                name,v2 = self.metadata.root.delete_file(filename, v)
+                if v2 == 0:
+                    print("Not found")
+                    break
                 print("OK")
                 break
             except rpyc.core.vinegar.GenericException as e:
@@ -130,11 +133,30 @@ class SurfStoreClient():
 
     def download(self, filename, location):
         dicpath = os.path.abspath(location)
+        # read all files
+        files = os.listdir(dicpath)
+        size = 4096
+        data = []
+        self.pathToDict[dicpath] = {}
+        for file in files:
+            if os.path.isdir(file):
+                continue
+            #todo change path to linux version
+            with open(dicpath + "\\" + file,"rb") as f:
+                bytes = f.read(size)
+                while bytes != b"":
+                    data.append(bytes)
+                    bytes = f.read(size)
+            f.close()
+            for block in data:
+                hash = self.convert(block)
+                self.pathToDict[dicpath][hash] = block
+        #download
         v, hashlist = self.metadata.root.read_file(filename)
         if len(hashlist) == 0:
             print("Not Found")
             return
-        file = open(dicpath + "/" + filename,'wb')
+        file = open(dicpath + filename,'wb')
         for hash in hashlist:
             if not dicpath in self.pathToDict:
                 self.pathToDict[dicpath] = {}

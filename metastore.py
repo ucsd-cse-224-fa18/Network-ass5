@@ -51,7 +51,7 @@ class MetadataStore(rpyc.Service):
     def __init__(self, config):
         self.fNamesToHList = {}
         self.fNamesToV = {}
-        self.tombstone = []
+        self.tombstone = set()
         self.hosts = []
         self.blockstores = []
         self.lock = threading.Lock()
@@ -79,17 +79,23 @@ class MetadataStore(rpyc.Service):
 
     def exposed_modify_file(self, filename, version, hashlist):
         with self.lock:
-            #print("doing")
-            #time.sleep(30)
             if filename not in self.fNamesToV:
+                flag = True
                 if version == 1:
+                    for hash in hashlist:
+                        i = self.findServer(hash)
+                        c = self.blockstores[i]
+                        if not c.root.has_block(hash):
+                            flag = False
+                if flag:
                     self.fNamesToHList[filename] = list(hashlist)
                     self.fNamesToV[filename] = version
+                    return 1, tuple()
                 if not version == 1:
                     response = ErrorResponse("Error:Requires version =" + str(1))
                     response.wrong_version_error(self.fNamesToV[filename])
                     raise response
-            if filename in self.fNamesToV:
+            elif filename in self.fNamesToV:
                 if not self.fNamesToV[filename] + 1 == version:
                     response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
                     response.wrong_version_error(self.fNamesToV[filename])
@@ -113,7 +119,6 @@ class MetadataStore(rpyc.Service):
 
             self.fNamesToHList[filename] = list(hashlist)
             self.fNamesToV[filename] += 1
-            #print("finished")
             return self.fNamesToV[filename], tuple(hashlist)
 
 
@@ -128,11 +133,14 @@ class MetadataStore(rpyc.Service):
     def exposed_delete_file(self, filename, version):
         if not filename in self.fNamesToV:
             return 0, tuple([])
+        if filename in self.tombstone:
+            self.fNamesToV[filename] += 1
+            return 0, tuple([])
         if not self.fNamesToV[filename] + 1 == version:
             response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
             response.wrong_version_error(self.fNamesToV[filename])
             raise response
-        self.tombstone.append(filename)
+        self.tombstone.add(filename)
         self.fNamesToV[filename] += 1
         return self.fNamesToV[filename], tuple([])
 
@@ -154,4 +162,11 @@ if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer
     server = ThreadedServer(MetadataStore(sys.argv[1]), port=6000)
     server.start()
+
+
+
+
+
+
+
 
