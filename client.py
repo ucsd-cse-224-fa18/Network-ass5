@@ -71,7 +71,7 @@ class SurfStoreClient():
     def upload(self, filepath):
         filepath = os.path.abspath(filepath)
         #linux k = filepath.rfind("/")
-        k = filepath.rfind("\\")
+        k = filepath.rfind("/")
         filename = filepath[k + 1:]
         dicpath = filepath[:k]
         v,hashlist = self.metadata.root.read_file(filename)
@@ -142,7 +142,7 @@ class SurfStoreClient():
             if os.path.isdir(file):
                 continue
             #todo change path to linux version
-            with open(dicpath + "\\" + file,"rb") as f:
+            with open(dicpath + "/" + file,"rb") as f:
                 bytes = f.read(size)
                 while bytes != b"":
                     data.append(bytes)
@@ -156,7 +156,7 @@ class SurfStoreClient():
         if len(hashlist) == 0:
             print("Not Found")
             return
-        file = open(dicpath + filename,'wb')
+        file = open(dicpath + "/" + filename,'wb')
         for hash in hashlist:
             if not dicpath in self.pathToDict:
                 self.pathToDict[dicpath] = {}
