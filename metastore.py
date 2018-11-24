@@ -1,5 +1,4 @@
 import threading
-
 import os
 import rpyc
 import sys
@@ -39,10 +38,7 @@ metadata is stored in memory, and no database systems or files will be used to
 maintain the data.
 '''
 
-
-
 class MetadataStore(rpyc.Service):
-
 
     """
         Initialize the class using the config file provided and also initialize
@@ -74,7 +70,6 @@ class MetadataStore(rpyc.Service):
         for (host,port) in self.hosts:
             blockstore = rpyc.connect(host,port)
             self.blockstores.append(blockstore)
-
 
     def findServer(self,h):
          return int(h, 16) % self.numBlockStores
@@ -118,7 +113,6 @@ class MetadataStore(rpyc.Service):
             self.fNamesToHList[filename] = list(hashlist)
             self.fNamesToV[filename] += 1
             return self.fNamesToV[filename], tuple(hashlist)
-
 
     def exposed_modify_file(self, filename, version, hashlist):
         missingBlocks = []
@@ -164,9 +158,6 @@ class MetadataStore(rpyc.Service):
             self.fNamesToV[filename] += 1
             return self.fNamesToV[filename], tuple(hashlist)
 
-
-
-
     '''
         DeleteFile(f,v): Deletes file f. Like ModifyFile(), the provided
         version number v must be one bigger than the most up-date-date version.
@@ -189,8 +180,6 @@ class MetadataStore(rpyc.Service):
         self.fNamesToV[filename] += 1
         return self.fNamesToV[filename], tuple([])
 
-
-
     def exposed_read_file(self, filename):
         with self.lock:
             if filename not in self.fNamesToV:
@@ -200,6 +189,13 @@ class MetadataStore(rpyc.Service):
             if filename in self.tombstone:
                 return (self.fNamesToV[filename],tuple([]))
             return self.fNamesToV[filename], tuple(self.fNamesToHList[filename])
+
+    def exposed_get_nearest(self, filename):
+        with self.lock:
+            if filename not in self.fNamesToHList:
+                return None
+            else:
+                return self.hash_to_stores[self.fNamesToHList[filename][0]]
 
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer
