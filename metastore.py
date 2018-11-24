@@ -1,8 +1,9 @@
 import threading
 
+import os
 import rpyc
 import sys
-
+import requests
 import time
 
 '''
@@ -30,7 +31,6 @@ class ErrorResponse(Exception):
         self.error_type = 3
 
 
-
 '''
 The MetadataStore RPC server class.
 
@@ -54,7 +54,9 @@ class MetadataStore(rpyc.Service):
         self.tombstone = set()
         self.hosts = []
         self.blockstores = []
+        self.hash_to_stores = dict()
         self.lock = threading.Lock()
+        self.method = 1
         with open(config) as f:
             lines = f.readlines()
         for line in lines:
@@ -67,6 +69,8 @@ class MetadataStore(rpyc.Service):
                 self.hosts.append((host, port))
             if line.startswith("metadata"):
                 self.host = line.split(": ")[1].split(":")[0]
+            if line.startswith("method"):
+                self.method = line.split(": ")[1]
         for (host,port) in self.hosts:
             blockstore = rpyc.connect(host,port)
             self.blockstores.append(blockstore)
@@ -75,9 +79,49 @@ class MetadataStore(rpyc.Service):
     def findServer(self,h):
          return int(h, 16) % self.numBlockStores
 
+    def exposed_modify_file2(self, filename, version, hashlist, index):
+        missingBlocks = []
+        with self.lock:
+            if filename not in self.fNamesToV:
+                flag = True
+                if version == 1:
+                    for hash in hashlist:
+                        c = self.blockstores[index]
+                        if not c.root.has_block(hash):
+                            flag = False
+                if flag:
+                    self.fNamesToHList[filename] = list(hashlist)
+                    self.fNamesToV[filename] = version
+                    return 1, tuple()
+                if not version == 1:
+                    response = ErrorResponse("Error:Requires version =" + str(1))
+                    response.wrong_version_error(self.fNamesToV[filename])
+                    raise response
+            elif filename in self.fNamesToV:
+                if not self.fNamesToV[filename] + 1 == version:
+                    response = ErrorResponse("Error:Requires version >=" + str(self.fNamesToV[filename] + 1))
+                    response.wrong_version_error(self.fNamesToV[filename])
+                    raise response
+
+            for hash in hashlist:
+                if hash not in self.hash_to_stores or self.hash_to_stores[hash] != index:
+                    self.hash_to_stores[hash] = index
+                c = self.blockstores[index]
+                if not c.root.has_block(hash):
+                    missingBlocks.append(hash)
+
+            if not len(missingBlocks) == 0:
+                response = ErrorResponse("missingBlocks")
+                response.missing_blocks(tuple(missingBlocks))
+                raise response
+
+            self.fNamesToHList[filename] = list(hashlist)
+            self.fNamesToV[filename] += 1
+            return self.fNamesToV[filename], tuple(hashlist)
 
 
     def exposed_modify_file(self, filename, version, hashlist):
+        missingBlocks = []
         with self.lock:
             if filename not in self.fNamesToV:
                 flag = True
@@ -101,7 +145,6 @@ class MetadataStore(rpyc.Service):
                     response.wrong_version_error(self.fNamesToV[filename])
                     raise response
 
-            missingBlocks = []
 
             if filename in self.tombstone:
                 self.tombstone.remove(filename)
@@ -120,6 +163,8 @@ class MetadataStore(rpyc.Service):
             self.fNamesToHList[filename] = list(hashlist)
             self.fNamesToV[filename] += 1
             return self.fNamesToV[filename], tuple(hashlist)
+
+
 
 
     '''
@@ -147,9 +192,7 @@ class MetadataStore(rpyc.Service):
 
 
     def exposed_read_file(self, filename):
-        #print("wait")
         with self.lock:
-            #print("start")
             if filename not in self.fNamesToV:
                 self.fNamesToV[filename] = 0
                 self.fNamesToHList[filename] = []

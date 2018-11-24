@@ -1,8 +1,12 @@
+import requests
 import rpyc
 import hashlib
 import os
 import sys
 import glob
+
+import time
+
 """
 A client is a program that interacts with SurfStore. It is used to create,
 modify, read, and delete files.  Your client will call the various file
@@ -38,7 +42,7 @@ class SurfStoreClient():
         self.blockhosts = []
         self.blockstores = []
         self.pathToDict ={}
-
+        self.method = 1
         with open(config) as f:
             lines = f.readlines()
         for line in lines:
@@ -54,7 +58,8 @@ class SurfStoreClient():
                 port = line.split(": ")[1].split(":")[1]
                 port = port.split("\n")[0]
                 self.metadata = rpyc.connect(host, port)
-
+            if line.startswith("method"):
+                self.method = int(line.split(": ")[1])
         for (host, port) in self.blockhosts:
             blockstore = rpyc.connect(host, port)
             self.blockstores.append(blockstore)
@@ -67,11 +72,28 @@ class SurfStoreClient():
     def convert(self,b):
         return hashlib.sha256(b).hexdigest()
 
+    #返回最近的blockstore的index
+    def find_nearest_server(self):
+        min = 1000000
+        wanted_server = None
+        for index, (host, port) in enumerate(self.blockhosts):
+            t1 = time.time()
+            print(host)
+            response = os.system("ping -n 1 " + host)
+            t2 = time.time()
+            if t1 - t2 < min:
+                min = t1 - t2
+                wanted_server = index
+        return wanted_server
+
+
+
+
 
     def upload(self, filepath):
         filepath = os.path.abspath(filepath)
-        #linux k = filepath.rfind("/")
         k = filepath.rfind("/")
+        #k = filepath.rfind("\\")
         filename = filepath[k + 1:]
         dicpath = filepath[:k]
         v,hashlist = self.metadata.root.read_file(filename)
@@ -96,21 +118,35 @@ class SurfStoreClient():
                 self.pathToDict[dicpath] = {}
             self.pathToDict[dicpath][hash] = block
         v += 1
+        #find nearest server
+        if self.method == 2:
+            index = self.find_nearest_server()
         while True:
             try:
-                self.metadata.root.modify_file(filename,v,tuple(hashlist))
+                print(self.method)
+                if self.method == 1:
+                    self.metadata.root.modify_file(filename,v,tuple(hashlist))
+                if self.method == 2:
+                    print("upload")
+                    self.metadata.root.modify_file2(filename, v, tuple(hashlist), index)
                 print("OK")
                 break
             except rpyc.core.vinegar.GenericException as e:
                 if e.error_type == 1:
                     self.eprint(e.error)
                     for hash in e.missing_blocks:
-                        blockstore = self.blockstores[self.findServer(hash)]
                         block = self.pathToDict[dicpath][hash]
-                        blockstore.root.store_block(hash,block)
+                        if self.method == 1:
+                            blockstore = self.blockstores[self.findServer(hash)]
+                            blockstore.root.store_block(hash, block)
+                        if self.method == 2:
+                            blockstore = self.blockstores[index]
+                            blockstore.root.store_block(hash,block)
                 if e.error_type == 2:
                     self.eprint(e.error)
                     v = e.current_version + 1
+
+
     def findServer(self,h):
          return int(h, 16) % self.numBlockStores
     def delete(self, filename):
@@ -141,6 +177,7 @@ class SurfStoreClient():
         for file in files:
             if os.path.isdir(file):
                 continue
+            #with open(dicpath + "\\" + file,"rb") as f:
             #todo change path to linux version
             with open(dicpath + "/" + file,"rb") as f:
                 bytes = f.read(size)
@@ -156,12 +193,16 @@ class SurfStoreClient():
         if len(hashlist) == 0:
             print("Not Found")
             return
-        file = open(dicpath + "/" + filename,'wb')
+        #file = open(dicpath +"\\" + filename,'wb')
+        file = open(dicpath +"/" + filename,'wb')
         for hash in hashlist:
             if not dicpath in self.pathToDict:
                 self.pathToDict[dicpath] = {}
             if not hash in self.pathToDict[dicpath]:
-                blockstore = self.blockstores[self.findServer(hash)]
+                if self.method == 1:
+                    blockstore = self.blockstores[self.findServer(hash)]
+                if self.method == 2:
+                    blockstore = self.blockstores[self.find_nearest_server()]
                 block = blockstore.root.get_block(hash)
                 self.pathToDict[dicpath][hash] = block
                 file.write(block)
