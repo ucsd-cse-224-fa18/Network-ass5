@@ -119,8 +119,8 @@ class SurfStoreClient():
             self.pathToDict[dicpath][hash] = block
         v += 1
         #find nearest server
-        server_index = self.metadata.root.exposed_get_nearest(filename)
-
+        if self.method == 2:
+            index = self.find_nearest_server()
         while True:
             try:
                 print(self.method)
@@ -128,7 +128,7 @@ class SurfStoreClient():
                     self.metadata.root.modify_file(filename,v,tuple(hashlist))
                 if self.method == 2:
                     print("upload")
-                    self.metadata.root.modify_file2(filename, v, tuple(hashlist), server_index)
+                    self.metadata.root.modify_file2(filename, v, tuple(hashlist), index)
                 print("OK")
                 break
             except rpyc.core.vinegar.GenericException as e:
@@ -195,7 +195,7 @@ class SurfStoreClient():
             return
         #file = open(dicpath +"\\" + filename,'wb')
         if self.method == 2:
-            index = self.find_nearest_server()
+            server_index = self.metadata.root.exposed_get_nearest(filename)
         file = open(dicpath +"/" + filename,'wb')
         for hash in hashlist:
             if not dicpath in self.pathToDict:
@@ -204,7 +204,7 @@ class SurfStoreClient():
                 if self.method == 1:
                     blockstore = self.blockstores[self.findServer(hash)]
                 if self.method == 2:
-                    blockstore = self.blockstores[index]
+                    blockstore = self.blockstores[server_index]
                 block = blockstore.root.get_block(hash)
                 self.pathToDict[dicpath][hash] = block
                 file.write(block)
