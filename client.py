@@ -79,7 +79,7 @@ class SurfStoreClient():
         for index, (host, port) in enumerate(self.blockhosts):
             t1 = time.time()
             print(host)
-            response = os.system("ping -n 1 " + host)
+            response = os.system("ping -c 1 " + host)
             t2 = time.time()
             if t1 - t2 < min:
                 min = t1 - t2
