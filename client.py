@@ -81,8 +81,8 @@ class SurfStoreClient():
             print(host)
             response = os.system("ping -c 1 " + host)
             t2 = time.time()
-            if t1 - t2 < min:
-                min = t1 - t2
+            if  t2 - t1 < min:
+                min = t2 - t1
                 wanted_server = index
         return wanted_server
 
@@ -197,14 +197,14 @@ class SurfStoreClient():
         if self.method == 2:
             server_index = self.metadata.root.exposed_get_nearest(filename)
         file = open(dicpath +"/" + filename,'wb')
+        if self.method == 2:
+            blockstore = self.blockstores[server_index]
         for hash in hashlist:
             if not dicpath in self.pathToDict:
                 self.pathToDict[dicpath] = {}
             if not hash in self.pathToDict[dicpath]:
                 if self.method == 1:
                     blockstore = self.blockstores[self.findServer(hash)]
-                if self.method == 2:
-                    blockstore = self.blockstores[server_index]
                 block = blockstore.root.get_block(hash)
                 self.pathToDict[dicpath][hash] = block
                 file.write(block)
